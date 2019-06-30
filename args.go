@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -69,7 +70,11 @@ func (args *Args) initFlagMap(flagInput string) error {
 			break
 		}
 
-		fmt.Printf("flagInput:%s, inputCursor:%d, spaceCursor:%d\n", flagInput, inputCursor, spaceCursor)
+		if spaceCursor <= inputCursor {
+			spaceCursor = len(flagInput)
+		}
+
+		//		fmt.Printf("flagInput:%s, inputCursor:%d, spaceCursor:%d\n", flagInput, inputCursor, spaceCursor)
 		flagChar := flagInput[inputCursor+1 : spaceCursor]
 
 		schemaDetail := args.containsFlagChar(flagChar)
@@ -91,6 +96,7 @@ func (args *Args) initFlagMap(flagInput string) error {
 		flagInput = strings.Trim(flagInput[nextSpaceCursor+1:len(flagInput)], " ")
 
 	}
+
 	return nil
 }
 
@@ -98,7 +104,13 @@ func findParam(flagInput string, schemaDetail *SchemaDetail) (string, string, in
 	nextInputCursor, nextSpaceCursor := findCursor(flagInput)
 
 	if nextInputCursor == -1 || nextInputCursor+2 > len(flagInput) {
-		return schemaDetail.DefaultVal, flagInput, -1
+		value := strings.Trim(flagInput, " ")
+		if value == "" {
+			return schemaDetail.DefaultVal, flagInput, -1
+		} else {
+			return value, flagInput, -1
+		}
+
 	}
 	_, err := strconv.Atoi(flagInput[nextInputCursor+1 : nextInputCursor+2])
 	if err != nil {
@@ -134,7 +146,8 @@ func (args *Args) GetValue(flagStr string) (error, interface{}) {
 		return UnsupportedError("the input flag is not supported"), nil
 	}
 
-	value := args.FlagMap[flagStr]
+	var value string = args.FlagMap[flagStr]
+	//	fmt.Printf("value:%s\n", value)
 	if schemaDetail.SchemaType == "bool" {
 		result, err := atob(value)
 		if err != nil {
@@ -151,7 +164,11 @@ func (args *Args) GetValue(flagStr string) (error, interface{}) {
 		return nil, result
 	}
 
-	return nil, nil
+	if schemaDetail.SchemaType == "string" {
+		return nil, value
+	}
+
+	return nil, value
 }
 
 func atoi(str string) (int, error) {
@@ -167,4 +184,15 @@ func atob(str string) (bool, error) {
 		return false, nil
 	}
 	return false, errors.New("format error: can not parse the string to bool.")
+}
+
+// convert all the object to a json string
+func MarshalObjToJson(data interface{}) string {
+	result, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
+
+	return string(result)
 }

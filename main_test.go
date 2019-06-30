@@ -101,3 +101,24 @@ func (s *ParserSuite) TestArgsInputIntIllegalParam2(c *C) {
 	_, err := NewArgs("l:bool:false,f:string:.,d:int:0", "-l true -d 10 21 -f /hh/oo")
 	c.Assert(err, NotNil)
 }
+
+// test if the args can parse string value. legal param should be considered
+func (s *ParserSuite) TestArgsInputStringLegalParam(c *C) {
+	args, _ := NewArgs("l:bool:false,f:string:.,d:int:0", "-l true -d 9231 -f /hh/oo")
+	_, input := args.GetValue("f")
+	c.Assert(input, Equals, "/hh/oo")
+}
+
+// test if the args can parse string value. legal param should be considered
+func (s *ParserSuite) TestArgsInputStringIllegalParam(c *C) {
+	args, _ := NewArgs("l:bool:false,f:string:.,d:int:0", "-l true -d 9231 -f /hh /oo")
+	_, err := args.GetValue("f")
+	c.Assert(err, NotNil)
+}
+
+// test if the args can parse string value. default param should be considered
+func (s *ParserSuite) TestArgsInputStringDefault(c *C) {
+	args, _ := NewArgs("l:bool:false,f:string:.,d:int:0", "-l true -d 9231 -f")
+	_, input := args.GetValue("f")
+	c.Assert(input, Equals, ".")
+}
