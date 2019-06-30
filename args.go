@@ -74,7 +74,6 @@ func (args *Args) initFlagMap(flagInput string) error {
 			spaceCursor = len(flagInput)
 		}
 
-		//		fmt.Printf("flagInput:%s, inputCursor:%d, spaceCursor:%d\n", flagInput, inputCursor, spaceCursor)
 		flagChar := flagInput[inputCursor+1 : spaceCursor]
 
 		schemaDetail := args.containsFlagChar(flagChar)
