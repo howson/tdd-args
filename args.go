@@ -16,11 +16,11 @@ const (
 	NoDefaultError = "NoDefaultError"
 )
 
-func NewArgs(schemaInput string, flagInput string) *Args {
+func NewArgs(schemaInput string, flagInput string) (*Args, error) {
 	args := new(Args)
 	args.initSchemaParserMap(schemaInput)
-	args.initFlagMap(flagInput)
-	return args
+	err := args.initFlagMap(flagInput)
+	return args, err
 }
 
 func (args *Args) initSchemaParserMap(schemaInput string) {
@@ -52,16 +52,24 @@ func (args *Args) newSchemaDetail(flagstr string) {
 
 }
 
-func (args *Args) initFlagMap(flagInput string) {
+func (args *Args) initFlagMap(flagInput string) error {
 	args.FlagMap = make(map[string]string)
+	flagInput = strings.Trim(flagInput, " ")
+	if flagInput == "" {
+		return nil
+	}
 	for {
+		if flagInput[0:1] != "-" {
+			return UnsupportedError("unsupported input format, initialization will be terminated.")
+		}
+
 		inputCursor, spaceCursor := findCursor(flagInput)
 
 		if inputCursor == -1 {
 			break
 		}
 
-		//		fmt.Printf("flagInput:%s, inputCursor:%d, spaceCursor:%d\n", flagInput, inputCursor, spaceCursor)
+		fmt.Printf("flagInput:%s, inputCursor:%d, spaceCursor:%d\n", flagInput, inputCursor, spaceCursor)
 		flagChar := flagInput[inputCursor+1 : spaceCursor]
 
 		schemaDetail := args.containsFlagChar(flagChar)
@@ -83,6 +91,7 @@ func (args *Args) initFlagMap(flagInput string) {
 		flagInput = strings.Trim(flagInput[nextSpaceCursor+1:len(flagInput)], " ")
 
 	}
+	return nil
 }
 
 func findParam(flagInput string, schemaDetail *SchemaDetail) (string, string, int) {
@@ -125,17 +134,28 @@ func (args *Args) GetValue(flagStr string) (error, interface{}) {
 		return UnsupportedError("the input flag is not supported"), nil
 	}
 
-	var value string
+	value := args.FlagMap[flagStr]
 	if schemaDetail.SchemaType == "bool" {
-		value = args.FlagMap[flagStr]
-
 		result, err := atob(value)
 		if err != nil {
-			return UnsupportedError(fmt.Sprintf("value %s can not be parsed.", value)), nil
+			return UnsupportedError(fmt.Sprintf("value %s can not be parsed to bool.", value)), nil
 		}
 		return nil, result
 	}
+
+	if schemaDetail.SchemaType == "int" {
+		result, err := atoi(value)
+		if err != nil {
+			return UnsupportedError(fmt.Sprintf("value %s can not be parsed to int.", value)), nil
+		}
+		return nil, result
+	}
+
 	return nil, nil
+}
+
+func atoi(str string) (int, error) {
+	return strconv.Atoi(str)
 }
 
 func atob(str string) (bool, error) {
