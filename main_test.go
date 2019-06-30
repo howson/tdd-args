@@ -122,3 +122,26 @@ func (s *ParserSuite) TestArgsInputStringDefault(c *C) {
 	_, input := args.GetValue("f")
 	c.Assert(input, Equals, ".")
 }
+
+// test if the args can parse value with a lot of space
+func (s *ParserSuite) TestArgsInputWithAlotOfSpace(c *C) {
+	args, _ := NewArgs("l:bool:false,f:string:.,d:int:0", "-l           true         -d        9231 -f")
+	_, input := args.GetValue("d")
+	c.Assert(input, Equals, 9231)
+
+	_, input = args.GetValue("l")
+	c.Assert(input, Equals, true)
+}
+
+// test if the args can parse value with additional flag
+func (s *ParserSuite) TestArgsInputWithAdditionalFlag(c *C) {
+	_, err := NewArgs("l:bool:false,f:string:.,d:int:0", "-l true -d 9231 -f /halo -s")
+	c.Assert(err, NotNil)
+}
+
+// test if the args can parse value with no default value
+func (s *ParserSuite) TestArgsInputWithNoDefaultValue(c *C) {
+	args, _ := NewArgs("l:bool:false,f:string:.,d:int:0,s:string", "-l true -d 9231 -f /halo -s")
+	_, input := args.GetValue("s")
+	c.Assert(input, IsNil)
+}

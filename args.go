@@ -60,7 +60,7 @@ func (args *Args) initFlagMap(flagInput string) error {
 		return nil
 	}
 	for {
-		if flagInput[0:1] != "-" {
+		if flagInput != "" && flagInput[0:1] != "-" {
 			return UnsupportedError("unsupported input format, initialization will be terminated.")
 		}
 
@@ -80,7 +80,7 @@ func (args *Args) initFlagMap(flagInput string) error {
 		schemaDetail := args.containsFlagChar(flagChar)
 		if schemaDetail == nil {
 			flagInput = strings.Replace(flagInput, flagInput[inputCursor:spaceCursor], "", 1)
-			continue
+			return UnsupportedError("unsupported input format, initialization will be terminated.")
 		}
 
 		flagInput = strings.Trim(flagInput[spaceCursor:len(flagInput)], " ")
@@ -146,8 +146,11 @@ func (args *Args) GetValue(flagStr string) (error, interface{}) {
 		return UnsupportedError("the input flag is not supported"), nil
 	}
 
-	var value string = args.FlagMap[flagStr]
-	//	fmt.Printf("value:%s\n", value)
+	value := args.FlagMap[flagStr]
+	if value == NoDefaultError {
+		return nil, nil
+	}
+
 	if schemaDetail.SchemaType == "bool" {
 		result, err := atob(value)
 		if err != nil {
