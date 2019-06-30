@@ -1,12 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
 type Args struct {
-	SchemaParserMap map[string]SchemaDetail
+	SchemaParserMap map[string]*SchemaDetail
 	FlagMap         map[string]string
 }
 
@@ -22,7 +24,7 @@ func NewArgs(schemaInput string, flagInput string) *Args {
 }
 
 func (args *Args) initSchemaParserMap(schemaInput string) {
-	args.SchemaParserMap = make(map[string]SchemaDetail)
+	args.SchemaParserMap = make(map[string]*SchemaDetail)
 
 	list := strings.Split(schemaInput, ",")
 
@@ -46,7 +48,7 @@ func (args *Args) newSchemaDetail(flagstr string) {
 		return
 	}
 
-	args.SchemaParserMap[flaglist[0]] = SchemaDetail{schType, schDefaultVal}
+	args.SchemaParserMap[flaglist[0]] = &SchemaDetail{schType, schDefaultVal}
 
 }
 
@@ -69,7 +71,18 @@ func (args *Args) initFlagMap(flagInput string) {
 		flagInput = strings.Trim(flagInput[spaceCursor:len(flagInput)], " ")
 
 		nextSpaceCursor := strings.Index(flagInput, " ")
-		flagInput = strings.Trim(flagInput[nextSpaceCursor+1:len(flagInput)], " ")
+		nextInputCursor := strings.Index(flagInput, "-")
+
+		if nextInputCursor == -1 || nextInputCursor+2 > len(flagInput) {
+			break
+		}
+		_, err := strconv.Atoi(flagInput[nextInputCursor : nextInputCursor+2])
+		if err != nil {
+			if nextInputCursor > nextSpaceCursor {
+				flagInput = strings.Trim(flagInput[nextSpaceCursor+1:len(flagInput)], " ")
+			}
+		}
+
 	}
 
 }
@@ -77,8 +90,41 @@ func (args *Args) initFlagMap(flagInput string) {
 func (args *Args) containsFlagChar(flagChar string) *SchemaDetail {
 	for key, val := range args.SchemaParserMap {
 		if key == flagChar {
-			return &val
+			return val
 		}
 	}
 	return nil
+}
+
+func (args *Args) GetValue(flagStr string) (error, interface{}) {
+	schemaDetail := args.SchemaParserMap[flagStr]
+	if schemaDetail == nil {
+		return UnsupportedError("the input flag is not supported"), nil
+	}
+
+	var value string
+	if schemaDetail.SchemaType == "bool" {
+		value = schemaDetail.DefaultVal
+		if value == NoDefaultError {
+			return UnsupportedError(fmt.Sprintf("param %s does not support empty input.", flagStr)), nil
+		}
+
+		result, err := atob(value)
+		if err != nil {
+			return UnsupportedError(fmt.Sprintf("value %s can not be parsed.", value)), nil
+		}
+		return nil, result
+	}
+	return nil, nil
+}
+
+func atob(str string) (bool, error) {
+	if str == "true" || str == "TRUE" {
+		return true, nil
+	}
+
+	if str == "false" || str == "FALSE" {
+		return false, nil
+	}
+	return false, errors.New("format error: can not parse the string to bool.")
 }

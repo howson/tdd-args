@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	. "gopkg.in/check.v1"
-	"strings"
 	"testing"
 )
 
@@ -42,4 +40,16 @@ func (s *ParserSuite) TestArgsInputNum(c *C) {
 	args := NewArgs("l:bool:false,f:string:.,d:int:0", "-l true -d 9231 -f /hh/oo")
 
 	c.Assert(len(args.FlagMap), Equals, 3)
+}
+
+// test if the args can parse bool value with no input, and it will use default value which i set in schema
+func (s *ParserSuite) TestArgsInputBoolDefault(c *C) {
+
+	args := NewArgs("l:bool:false,f:string:.,d:int:0", "-l -d 9231 -f /hh/oo")
+	_, input := args.GetValue("l")
+	c.Assert(input, Equals, false)
+
+	args = NewArgs("l:bool:true,f:string:.,d:int:0", "-l -d 9231 -f /hh/oo")
+	_, input = args.GetValue("l")
+	c.Assert(input, Equals, true)
 }
