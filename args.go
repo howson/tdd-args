@@ -36,55 +36,78 @@ func (args *Args) initSchemaParserMap(schemaInput string) {
 func (args *Args) newSchemaDetail(flagstr string) {
 	flaglist := strings.Split(flagstr, ":")
 
-	var schType string
-	var schDefaultVal string
+	var schemaType string
+	var schemaDefaultVal string
 	if len(flaglist) > 2 {
-		schType = flaglist[1]
-		schDefaultVal = flaglist[2]
+		schemaType = flaglist[1]
+		schemaDefaultVal = flaglist[2]
 	} else if len(flaglist) == 2 {
-		schType = flaglist[1]
-		schDefaultVal = NoDefaultError
+		schemaType = flaglist[1]
+		schemaDefaultVal = NoDefaultError
 	} else {
 		return
 	}
 
-	args.SchemaParserMap[flaglist[0]] = &SchemaDetail{schType, schDefaultVal}
+	args.SchemaParserMap[flaglist[0]] = &SchemaDetail{schemaType, schemaDefaultVal}
 
 }
 
 func (args *Args) initFlagMap(flagInput string) {
 	args.FlagMap = make(map[string]string)
 	for {
-		inputCursor := strings.Index(flagInput, "-")
-		spaceCursor := strings.Index(flagInput, " ")
+		inputCursor, spaceCursor := findCursor(flagInput)
 
 		if inputCursor == -1 {
 			break
 		}
 
+		//		fmt.Printf("flagInput:%s, inputCursor:%d, spaceCursor:%d\n", flagInput, inputCursor, spaceCursor)
 		flagChar := flagInput[inputCursor+1 : spaceCursor]
 
-		if schemaDetail := args.containsFlagChar(flagChar); schemaDetail != nil {
-			args.FlagMap[flagChar] = "input"
+		schemaDetail := args.containsFlagChar(flagChar)
+		if schemaDetail == nil {
+			flagInput = strings.Replace(flagInput, flagInput[inputCursor:spaceCursor], "", 1)
+			continue
 		}
 
 		flagInput = strings.Trim(flagInput[spaceCursor:len(flagInput)], " ")
-
-		nextSpaceCursor := strings.Index(flagInput, " ")
-		nextInputCursor := strings.Index(flagInput, "-")
-
-		if nextInputCursor == -1 || nextInputCursor+2 > len(flagInput) {
+		value, changeInput, nextSpaceCursor := findParam(flagInput, schemaDetail)
+		flagInput = changeInput
+		args.FlagMap[flagChar] = value
+		if nextSpaceCursor < 0 {
 			break
 		}
-		_, err := strconv.Atoi(flagInput[nextInputCursor : nextInputCursor+2])
-		if err != nil {
-			if nextInputCursor > nextSpaceCursor {
-				flagInput = strings.Trim(flagInput[nextSpaceCursor+1:len(flagInput)], " ")
-			}
+		if nextSpaceCursor == 0 {
+			continue
 		}
+		flagInput = strings.Trim(flagInput[nextSpaceCursor+1:len(flagInput)], " ")
 
 	}
+}
 
+func findParam(flagInput string, schemaDetail *SchemaDetail) (string, string, int) {
+	nextInputCursor, nextSpaceCursor := findCursor(flagInput)
+
+	if nextInputCursor == -1 || nextInputCursor+2 > len(flagInput) {
+		return schemaDetail.DefaultVal, flagInput, -1
+	}
+	_, err := strconv.Atoi(flagInput[nextInputCursor+1 : nextInputCursor+2])
+	if err != nil {
+		if nextInputCursor > nextSpaceCursor {
+			return flagInput[0:nextSpaceCursor], flagInput, nextSpaceCursor
+		} else {
+			return schemaDetail.DefaultVal, flagInput, 0
+		}
+	} else {
+		value := flagInput[0:nextSpaceCursor]
+		return value, strings.Replace(flagInput, value, "", 1), nextSpaceCursor
+	}
+}
+
+func findCursor(flagInput string) (int, int) {
+	inputCursor := strings.Index(flagInput, "-")
+	spaceCursor := strings.Index(flagInput, " ")
+	return inputCursor, spaceCursor
 }
 
 func (args *Args) containsFlagChar(flagChar string) *SchemaDetail {
@@ -104,10 +127,7 @@ func (args *Args) GetValue(flagStr string) (error, interface{}) {
 
 	var value string
 	if schemaDetail.SchemaType == "bool" {
-		value = schemaDetail.DefaultVal
-		if value == NoDefaultError {
-			return UnsupportedError(fmt.Sprintf("param %s does not support empty input.", flagStr)), nil
-		}
+		value = args.FlagMap[flagStr]
 
 		result, err := atob(value)
 		if err != nil {

@@ -53,3 +53,17 @@ func (s *ParserSuite) TestArgsInputBoolDefault(c *C) {
 	_, input = args.GetValue("l")
 	c.Assert(input, Equals, true)
 }
+
+// test if the args can parse bool value with input. legal input should be considered
+func (s *ParserSuite) TestArgsInputBoolLegalParam(c *C) {
+	args := NewArgs("l:bool:false,f:string:.,d:int:0", "-l true -d 9231 -f /hh/oo")
+	_, input := args.GetValue("l")
+	c.Assert(input, Equals, true)
+}
+
+// test if the args can parse bool value with input. illegal input should be considered
+func (s *ParserSuite) TestArgsInputBoolIllegalParam(c *C) {
+	args := NewArgs("l:bool:false,f:string:.,d:int:0", "-l TRue -d 9231 -f /hh/oo")
+	err, _ := args.GetValue("l")
+	c.Assert(err, NotNil)
+}
