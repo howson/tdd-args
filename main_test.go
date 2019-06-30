@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	. "gopkg.in/check.v1"
+	"strings"
 	"testing"
 )
 
@@ -18,7 +20,7 @@ func (s *ParserSuite) SetUpSuite(c *C) {}
 // only check the length
 func (s *ParserSuite) TestSchemaParseLength(c *C) {
 
-	args := NewArgs("l:bool:false,f:string:.,d:int:0")
+	args := NewArgs("l:bool:false,f:string:.,d:int:0", "")
 
 	c.Assert(len(args.SchemaParserMap), Equals, 3)
 }
@@ -27,9 +29,17 @@ func (s *ParserSuite) TestSchemaParseLength(c *C) {
 // check if it can be parse correctly
 func (s *ParserSuite) TestSchemaParseCorrectly(c *C) {
 
-	args := NewArgs("l:bool:false,f:string:.,d:int:0")
+	args := NewArgs("l:bool:false,f:string:.,d:int:0", "")
 	schemaDetail := args.SchemaParserMap["f"]
 
 	c.Assert(schemaDetail.SchemaType, Equals, "string")
 	c.Assert(schemaDetail.DefaultVal, Equals, ".")
+}
+
+// test if the args can accept input and parse to map with correct number of flag.
+func (s *ParserSuite) TestArgsInputNum(c *C) {
+
+	args := NewArgs("l:bool:false,f:string:.,d:int:0", "-l true -d 9231 -f /hh/oo")
+
+	c.Assert(len(args.FlagMap), Equals, 3)
 }
